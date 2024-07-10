@@ -16,6 +16,8 @@ struct ContentView: View {
     @State private var errorMessage = ""
     @State private var showingError = false
     
+    @State private var score = 0
+    
     var body: some View {
         NavigationStack {
             List {
@@ -33,6 +35,10 @@ struct ContentView: View {
                         }
                     }
                 }
+                
+                Section("Your current Score") {
+                    Text("Score: \(score)")
+                }
             }
             .navigationTitle(rootWord)
             .onSubmit(addNewWord)
@@ -41,6 +47,9 @@ struct ContentView: View {
                 Button("Ok") {}
             } message: {
                 Text(errorMessage)
+            }
+            .toolbar {
+                Button("Reset Game", action: startGame)
             }
         }
     }
@@ -52,13 +61,23 @@ struct ContentView: View {
         
         // extra validation
         
+        guard isNotTooShort(word: answer) else {
+            wordError(title: "Word too short!", message: "Must have 3 characters at least")
+            return
+        }
+        
+        guard isNotSameAsRoot(word: answer) else {
+            wordError(title: "Thats the root word!", message: "You can't repeat it")
+            return
+        }
+        
         guard isOriginal(word: answer) else {
             wordError(title: "already used Word!", message: "Be more original")
             return
         }
         
         guard isPossible(word: answer) else {
-            wordError(title: "Word not possible", message: "Ypu can't spell that word from '\(rootWord)'!")
+            wordError(title: "Word not possible", message: "You can't spell that word from '\(rootWord)'!")
             return
         }
         
@@ -71,10 +90,15 @@ struct ContentView: View {
             usedWords.insert(answer, at: 0)
         }
         
+        score += answer.count + 1
         newWord = ""
     }
     
     func startGame() {
+        usedWords = [String]()
+        newWord = ""
+        score = 0
+        
         if let startWordsURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
             if let startWords = try? String(contentsOf: startWordsURL) {
                 let allWords = startWords.components(separatedBy: "\n")
@@ -112,6 +136,14 @@ struct ContentView: View {
         let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "es")
         
         return misspelledRange.location == NSNotFound
+    }
+    
+    func isNotTooShort(word: String) -> Bool {
+        return word.count >= 3
+    }
+    
+    func isNotSameAsRoot(word: String) -> Bool {
+        return word != rootWord
     }
     
     func wordError(title: String, message: String) {
